@@ -1,0 +1,36 @@
+name: Metaplanet-Kurse aktualisieren
+
+on:
+  schedule:
+    - cron: '23 7 * * 1-5'    # werktags 07:23 UTC, nach Börsenschluss Tokio
+  workflow_dispatch:           # manuell startbar unter "Actions"
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Abhängigkeiten
+        run: pip install yfinance pandas
+
+      - name: Kurse laden
+        run: python scripts/update_3350.py
+
+      - name: Commit & Push
+        run: |
+          if git diff --quiet; then
+            echo "Keine Änderungen."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Kurse bis $(python -c "import json;print(json.load(open('data/3350.json'))['updated'])")"
+          git push
